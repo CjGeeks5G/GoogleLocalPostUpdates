@@ -55,13 +55,5 @@ export class ChatService {
       messages: messagesWithContext as ChatCompletionMessageParam[],
       model: 'gpt-4o-mini',
     });
-    // Trim unnecesary /n and /g
-    const cleanedResponse = response.choices[0].message.content.replace(
-      /\n+/g,
-      ' ',
-    );
-
-    // Return trimed response
-    return cleanedResponse;
   }
 }
