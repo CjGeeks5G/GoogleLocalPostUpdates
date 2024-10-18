@@ -2,51 +2,50 @@ import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { ChatCompletionMessageDto } from './dto/create-chat-completion-request.dto';
 import { ChatCompletionMessageParam } from 'openai/resources';
-import * as fs from 'fs';
-import * as csv from 'csv-parser';
+import { ExchangeService } from './exchange.service';
+import { SearchProductService } from './search-product.service';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly openai: OpenAI) {}
-
-  // const filePath = 'src/assets/csv/products_list.csv';  // Ruta hacia el CSV
-  // Método para leer el archivo CSV y crear contexto
-  async readCSV(filePath: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const results: any[] = [];
-      fs.createReadStream(filePath)
-        .pipe(csv())
-        .on('data', (data) => {
-          // Validar que los campos no sean undefined o null y generar el contexto
-          if (data.displayTitle && data.price && data.productType) {
-            results.push(`Product: ${data.displayTitle} (Category: ${data.productType}), Price: ${data.price}, Discount: ${data.discount ? data.discount + '%' : 'No Discount'}`);
-          }
-        })
-        .on('end', () => {
-          const context = results.join('\n');
-          resolve(context);
-        })
-        .on('error', (error) => reject(error));
-    });
-  }
-  
+  constructor(
+    private readonly openai: OpenAI,
+    private readonly exchangeService: ExchangeService,
+    private readonly searchService: SearchProductService,
+  ) {}
 
   async createChatCompletion(messages: ChatCompletionMessageDto[]) {
+    const exchangeRates = await this.exchangeService.getExchangeRates();
+
     // Leer el archivo CSV y obtener el contexto
-    const context = await this.readCSV('src/assets/csv/products_list.csv');
+    const context = await this.searchService.searchProducts(
+      'src/assets/csv/products_list.csv',
+    );
 
     // Validación: Imprimir el contexto generado
-    console.log('Contexto generado:\n', context);
 
-    // Agregar el contexto a los mensajes (puedes personalizar cómo lo usas)
+    // Generar contexto con los productos encontrados y las tasas de cambio
+    const combinedContext = `
+    Productos relacionados con":
+    ${context}
+    
+    Tasas de cambio actuales (basadas en EUR):
+    ${Object.entries(exchangeRates.rates)
+      .map(([currency, rate]) => `${currency}: ${rate}`)
+      .join('\n')}
+    `;
+
+    console.log('Contexto generado:\n', combinedContext);
+    // Agregar el contexto a los mensajes
     const messagesWithContext = [
-      { role: 'user', content: `Contexto: ${context}. Por favor, confirma que has recibido esta información antes de proceder.` },
+      { role: 'user', content: `Contexto: ${combinedContext}.` },
       ...messages,
     ];
+
     const response = await this.openai.chat.completions.create({
       messages: messagesWithContext as ChatCompletionMessageParam[],
       model: 'gpt-4o-mini',
     });
-    
+
+    return response;
   }
 }
