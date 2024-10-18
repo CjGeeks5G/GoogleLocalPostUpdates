@@ -16,7 +16,7 @@ export class ChatService {
   async createChatCompletion(messages: ChatCompletionMessageDto[]) {
     const exchangeRates = await this.exchangeService.getExchangeRates();
 
-    const userMessage = messages.find(msg => msg.role === 'user');
+    const userMessage = messages.find((msg) => msg.role === 'user');
 
     if (!userMessage) {
       throw new Error('No se encontró un mensaje del usuario.');
@@ -27,7 +27,7 @@ export class ChatService {
     // Read the CSV file and get the context
     const context = await this.searchService.searchProducts(
       'src/assets/csv/products_list.csv',
-      userQuestion
+      userQuestion,
     );
 
     // Validation: Print the generated context
@@ -55,7 +55,13 @@ export class ChatService {
       messages: messagesWithContext as ChatCompletionMessageParam[],
       model: 'gpt-4o-mini',
     });
+    // Eliminar los saltos de línea innecesarios
+    const cleanedResponse = response.choices[0].message.content.replace(
+      /\n+/g,
+      ' ',
+    );
 
-    return response;
+    // Retornar la respuesta limpia
+    return cleanedResponse;
   }
 }
