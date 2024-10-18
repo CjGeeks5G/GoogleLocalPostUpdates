@@ -16,28 +16,38 @@ export class ChatService {
   async createChatCompletion(messages: ChatCompletionMessageDto[]) {
     const exchangeRates = await this.exchangeService.getExchangeRates();
 
-    // Leer el archivo CSV y obtener el contexto
+    const userMessage = messages.find(msg => msg.role === 'user');
+
+    if (!userMessage) {
+      throw new Error('No se encontró un mensaje del usuario.');
+    }
+
+    const userQuestion = userMessage.content;
+
+    // Read the CSV file and get the context
     const context = await this.searchService.searchProducts(
       'src/assets/csv/products_list.csv',
+      userQuestion
     );
 
-    // Validación: Imprimir el contexto generado
+    // Validation: Print the generated context
 
-    // Generar contexto con los productos encontrados y las tasas de cambio
+    // Generate context with the found products and exchange rates
     const combinedContext = `
-    Productos relacionados con":
+    Related products to:
     ${context}
     
-    Tasas de cambio actuales (basadas en EUR):
+    Current exchange rates (based on EUR):
     ${Object.entries(exchangeRates.rates)
       .map(([currency, rate]) => `${currency}: ${rate}`)
       .join('\n')}
     `;
 
-    console.log('Contexto generado:\n', combinedContext);
-    // Agregar el contexto a los mensajes
+    console.log('Generated context:\n', combinedContext);
+
+    // Add the context to the messages
     const messagesWithContext = [
-      { role: 'user', content: `Contexto: ${combinedContext}.` },
+      { role: 'user', content: `Context: ${combinedContext}.` },
       ...messages,
     ];
 

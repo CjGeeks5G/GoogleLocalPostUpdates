@@ -4,27 +4,34 @@ import * as csv from 'csv-parser';
 
 @Injectable()
 export class SearchProductService {
-  // Método para leer productos desde el archivo CSV
-  async searchProducts(filePath: string): Promise<string> {
+  // Method to search for products from the CSV file based on a query
+  async searchProducts(filePath: string, query: string): Promise<string[]> {
     return new Promise((resolve, reject) => {
       const results: string[] = [];
+      const keywords = query.toLowerCase().split(' '); // Split query into individual keywords
+
       fs.createReadStream(filePath)
         .pipe(csv())
         .on('data', (data) => {
-          // Validar que los campos no sean undefined o null y generar el contexto de productos
-          if (data.displayTitle && data.price && data.productType) {
-            results.push(`Product: ${data.displayTitle} (Category: ${data.productType}), Price: ${data.price}, Discount: ${data.discount ? data.discount + '%' : 'No Discount'}`);
+          // Concatenate relevant fields (like title, description, etc.) into a single searchable string
+          const productText = `${data.displayTitle} ${data.productType} ${data.description} ${data.price}`.toLowerCase();
+
+          // Check if the product matches all the keywords
+          const isMatch = keywords.every(keyword => productText.includes(keyword));
+
+          if (isMatch) {
+            // Format the matching product description and add to results
+            const productDescription = `Product: ${data.displayTitle} (Category: ${data.productType}), Price: ${data.price}, Discount: ${data.discount ? data.discount + '%' : 'No Discount'}`;
+            results.push(productDescription);
           }
         })
         .on('end', () => {
-          const context = results.join('\n');  // Separar los productos con saltos de línea
-          resolve(context);
+          resolve(results); // Resolve the promise with the search results
         })
         .on('error', (error) => {
-          console.error('Error al leer el archivo CSV:', error);
-          reject(new Error('Error al leer el archivo CSV.'));
+          console.error('Error reading the CSV file:', error);
+          reject(new Error('Error reading the CSV file.'));
         });
     });
   }
 }
-
