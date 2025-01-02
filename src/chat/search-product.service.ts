@@ -10,28 +10,44 @@ export class SearchProductService {
       const results: string[] = [];
       const keywords = query.toLowerCase().split(' '); // Split query into individual keywords
 
+      // Check if the file exists before proceeding
+      if (!fs.existsSync(filePath)) {
+        return reject(new Error('File not found.'));
+      }
+
       fs.createReadStream(filePath)
         .pipe(csv())
         .on('data', (data) => {
-          // Concatenate relevant fields (like title, description, etc.) into a single searchable string
-          const productText = `${data.displayTitle} ${data.productType} ${data.description} ${data.price}`.toLowerCase();
+          // Log the raw data to check if it is being parsed correctly
+          console.log('Parsed data:', data);
 
-          // Check if the product matches all the keywords
-          const isMatch = keywords.every(keyword => productText.includes(keyword));
+          const businessName = data.businessName || '';
+          const location = data.location || '';
+          const zipCode = data.zipCode || '';
+          const tags = data.tags || '';
+          const message = data.message || '';
+          const phone = data.phone || '';
+
+          const productText = `${businessName} ${location} ${zipCode} ${tags} ${message} ${phone}`.toLowerCase();
+
+          // Check if the data is correct
+          const normalizedText = productText.replace(/[^\w\s]/g, '');
+          const isMatch = keywords.every(keyword => normalizedText.includes(keyword));
 
           if (isMatch) {
-            // Format the matching product description and add to results
-            const productDescription = `Product: ${data.displayTitle} (Category: ${data.productType}), Price: ${data.price}, Discount: ${data.discount ? data.discount + '%' : 'No Discount'}`;
+            const productDescription = `Company: ${businessName}, Location: ${location}, Tags: ${tags}, Message: ${message}`;
             results.push(productDescription);
           }
         })
         .on('end', () => {
+          console.log('Finished reading the CSV file.');
           resolve(results); // Resolve the promise with the search results
         })
         .on('error', (error) => {
           console.error('Error reading the CSV file:', error);
           reject(new Error('Error reading the CSV file.'));
         });
+
     });
   }
 }

@@ -2,19 +2,16 @@ import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { ChatCompletionMessageDto } from './dto/create-chat-completion-request.dto';
 import { ChatCompletionMessageParam } from 'openai/resources';
-import { ExchangeService } from './exchange.service';
 import { SearchProductService } from './search-product.service';
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly openai: OpenAI,
-    private readonly exchangeService: ExchangeService,
     private readonly searchService: SearchProductService,
   ) {}
 
   async createChatCompletion(messages: ChatCompletionMessageDto[]) {
-    const exchangeRates = await this.exchangeService.getExchangeRates();
 
     const userMessage = messages.find(msg => msg.role === 'user');
 
@@ -26,7 +23,7 @@ export class ChatService {
 
     // Read the CSV file and get the context
     const context = await this.searchService.searchProducts(
-      'src/assets/csv/products_list.csv',
+      'src/assets/csv/constructionDataOG.csv',
       userQuestion
     );
 
@@ -34,13 +31,9 @@ export class ChatService {
 
     // Generate context with the found products and exchange rates
     const combinedContext = `
-    Related products to:
+    Related messages to:
     ${context}
-    
-    Current exchange rates (based on EUR):
-    ${Object.entries(exchangeRates.rates)
-      .map(([currency, rate]) => `${currency}: ${rate}`)
-      .join('\n')}
+    }
     `;
 
     console.log('Generated context:\n', combinedContext);

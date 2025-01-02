@@ -7,8 +7,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   const config = new DocumentBuilder()
-    .setTitle('Chatbot App')
-    .setDescription('This is Wizybot’s  technical assessment')
+    .setTitle('Google Updates App')
+    .setDescription('This is a test for ChatGPT model')
     .setVersion('1.0')
     .addTag('chatbot')
     .build();
